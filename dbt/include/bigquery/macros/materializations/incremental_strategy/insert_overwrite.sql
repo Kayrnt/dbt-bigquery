@@ -17,7 +17,7 @@
 {% endmacro %}
 
 {% macro bq_copy_partitions(tmp_relation, target_relation, partitions, partition_by) %}
-
+  {% set tmp_relations = [] %}
   {% for partition in partitions %}
     {% if partition_by.data_type == 'int64' %}
       {% set partition = partition | as_text %}
@@ -31,10 +31,10 @@
       {% set partition = partition.strftime("%Y") %}
     {% endif %}
     {% set tmp_relation_partitioned = api.Relation.create(database=tmp_relation.database, schema=tmp_relation.schema, identifier=tmp_relation.table ~ '$' ~ partition, type=tmp_relation.type) %}
-    {% set target_relation_partitioned = api.Relation.create(database=target_relation.database, schema=target_relation.schema, identifier=target_relation.table ~ '$' ~ partition, type=target_relation.type) %}
-    {% do adapter.copy_table(tmp_relation_partitioned, target_relation_partitioned, "table") %}
+    {% set tmp_relations = tmp_relations.append(tmp_relation_partitioned) %}
   {% endfor %}
-
+  {% set target_relation_partitioned = api.Relation.create(database=target_relation.database, schema=target_relation.schema, identifier=target_relation.table, type=target_relation.type) %}
+  {% do adapter.copy_table(tmp_relations, target_relation_partitioned, "table") %}
 {% endmacro %}
 
 {% macro bq_insert_overwrite_sql(
